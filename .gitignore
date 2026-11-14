@@ -1,0 +1,9 @@
+/build/
+/data/
+node_modules/
+*.class
+.env
+.env.*
+*.keystore
+*.jks
+smoke-*.png
