@@ -1,0 +1,1 @@
+{"scenarios":["calm","volatile","informed","flash"],"labels":{"calm":"Calm two-sided flow","volatile":"Volatile tape","informed":"Toxic, informed-heavy flow","flash":"Flash move"},"tickSize":0.01}

@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; connect-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
+<title>lob - a limit order book and the bot that quotes it</title>
+<meta name="description" content="A limit order book, matching engine and market-making bot built from scratch in Java, replayed live in your browser.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='5' y='12' width='9' height='14' rx='1.5' fill='%236fd3a7'/%3E%3Crect x='18' y='6' width='9' height='14' rx='1.5' fill='%23e07856'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="styles.css">
+<link rel="preload" href="fonts/clash-display-600.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/satoshi-400.woff2" as="font" type="font/woff2" crossorigin>
+</head>
+<body>
+<header class="top">
+  <span class="wordmark">lob</span>
+  <span class="top-stats" id="top-stats">matching engine &middot; market maker &middot; synthetic market</span>
+  <a class="source" href="https://github.com/Aditya2375/lob">source</a>
+</header>
+
+<main>
+  <section class="hero">
+    <h1>A limit order book<br><span class="dim">that fills itself.</span></h1>
+    <p class="lede">A matching engine, a simulated market, and a market-making bot quoting
+    into it - all built from scratch in Java, replayed and re-runnable in your browser.
+    Every fill, every tick of PnL, accounted.</p>
+  </section>
+
+  <section class="controls">
+    <div class="scenarios" id="scenarios" role="group" aria-label="Scenario"></div>
+    <details class="tune">
+      <summary>Tune the market and rerun it here</summary>
+      <div class="sliders">
+        <label>volatility <input type="range" id="sl-vol" min="2" max="30" step="1" value="6"><span id="sl-vol-v"></span></label>
+        <label>informed share <input type="range" id="sl-inf" min="0" max="0.4" step="0.01" value="0.06"><span id="sl-inf-v"></span></label>
+        <label>base half-spread <input type="range" id="sl-spr" min="2" max="30" step="1" value="8"><span id="sl-spr-v"></span></label>
+        <label>inventory cap <input type="range" id="sl-inv" min="40" max="400" step="20" value="200"><span id="sl-inv-v"></span></label>
+        <button id="rerun" type="button">Run simulation</button>
+        <span class="rerun-note" id="rerun-note">Runs the same engine the scenarios were built with, in your tab.</span>
+      </div>
+    </details>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <h2>The tape and the quotes</h2>
+      <p class="panel-sub" id="price-sub">Fair value, the mid, and the bot's bid/ask around it.</p>
+    </div>
+    <canvas id="chart-price" height="300" role="img" aria-label="Line chart of fair value, mid price, and the bot’s bid and ask over the run"></canvas>
+    <div class="legend">
+      <span><i class="sw sw-fair"></i>fair value</span>
+      <span><i class="sw sw-mid"></i>mid</span>
+      <span><i class="sw sw-quotes"></i>bot quotes</span>
+    </div>
+  </section>
+
+  <section class="row">
+    <div class="panel half">
+      <div class="panel-head">
+        <h2>The book</h2>
+        <p class="panel-sub">Resting depth at the final tick.</p>
+      </div>
+      <canvas id="chart-depth" height="260" role="img" aria-label="Depth ladder of resting bids and asks at the final tick"></canvas>
+    </div>
+    <div class="panel half">
+      <div class="panel-head">
+        <h2>Recent fills</h2>
+        <p class="panel-sub">The last trades to cross the spread.</p>
+      </div>
+      <table class="tape">
+        <thead><tr><th>tick</th><th>price</th><th>qty</th><th>taker</th></tr></thead>
+        <tbody id="tape-body"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <h2>What the bot made</h2>
+      <p class="panel-sub">Total PnL, marked to the mid. Shaded: drawdown from the running peak.</p>
+    </div>
+    <canvas id="chart-pnl" height="240" role="img" aria-label="Bot profit and loss over the run with drawdown shading"></canvas>
+    <canvas id="chart-inv" height="120" role="img" aria-label="Bot inventory over the run with cap rails"></canvas>
+    <p class="panel-sub tight">Inventory. The skew pushes quotes against it; the cap cuts it off.</p>
+  </section>
+
+  <section class="stats" id="stats"></section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <h2>Who the bot earns from</h2>
+      <p class="panel-sub">Each bot fill, marked against fair value 50 ticks later. Spread capture
+      shows up as a gain against noise flow; adverse selection as a loss against informed flow.</p>
+    </div>
+    <div class="markout" id="markout"></div>
+  </section>
+
+  <section class="how">
+    <h2>Under the hood</h2>
+    <ol class="cards">
+      <li><span class="num">01</span><h3>The book</h3><p>Price-time priority. Orders rest in FIFO
+      queues per level; a crossing order walks the opposite side, best price first. Cancels are
+      O(1) through an id map. Self-matches are cancelled back, never traded.</p></li>
+      <li><span class="num">02</span><h3>The market</h3><p>A fair-value random walk. Noise takers
+      hit or lift at random; informed takers trade toward fair value when the mid drifts.
+      Passive background orders keep depth behind the quotes.</p></li>
+      <li><span class="num">03</span><h3>The bot</h3><p>Quotes both sides of the mid. The spread
+      widens with recent volatility; both quotes shift against inventory, and a hard cap stops
+      it adding on that side. It reprices every two ticks.</p></li>
+      <li><span class="num">04</span><h3>The accounting</h3><p>Cash plus inventory marked to the
+      mid, every tick. Fills are attributed by counterparty and marked out against fair value
+      50 ticks on - that is where adverse selection shows.</p></li>
+    </ol>
+  </section>
+</main>
+
+<footer>
+  <p>A simulated market with synthetic agents - no real instruments, no real money. The four
+  scenarios were generated once by the Java engine; the rerun button uses the same engine ported
+  to JavaScript, verified bit-identical against it. Prices are in ticks (100&nbsp;=&nbsp;1.00).</p>
+</footer>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>

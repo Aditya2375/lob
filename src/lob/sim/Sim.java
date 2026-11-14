@@ -38,7 +38,7 @@ public final class Sim {
 
         Rng rng = new Rng(p.seed);
         long fair = p.startPriceTicks;
-        long lastTradePrice = p.startPriceTicks;
+        lastTradePrice = p.startPriceTicks;
 
         for (int t = 0; t < n; t++) {
             fair += Math.round(p.fundamentalVol * rng.nextGaussian());
@@ -100,9 +100,12 @@ public final class Sim {
         return m != null ? m : fallback;
     }
 
+    private long lastTradePrice;
+
     private void absorb(List<Trade> trades) {
         for (Trade tr : trades) {
             tape.add(tr);
+            lastTradePrice = tr.priceTicks;
             if (tr.maker.equals(MarketMaker.OWNER) || tr.taker.equals(MarketMaker.OWNER)) {
                 boolean botBuy = (tr.takerSide == Side.BUY && tr.taker.equals(MarketMaker.OWNER))
                         || (tr.takerSide == Side.SELL && tr.maker.equals(MarketMaker.OWNER));

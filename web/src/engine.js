@@ -226,12 +226,13 @@ export function runSim(p) {
   const tape = [];
   const fills = [], fillCp = [];
   let fair = p.startPriceTicks;
-  const lastTradePrice = p.startPriceTicks;
+  let lastTradePrice = p.startPriceTicks;
   const effectiveMid = () => { const m = book.mid(); return m !== null ? m : lastTradePrice; };
 
   const absorb = (trades) => {
     for (const tr of trades) {
       tape.push(tr);
+      lastTradePrice = tr.priceTicks;
       if (tr.maker === 'mm' || tr.taker === 'mm') {
         const botBuy = (tr.takerSide === Side.BUY && tr.taker === 'mm')
             || (tr.takerSide === Side.SELL && tr.maker === 'mm');
