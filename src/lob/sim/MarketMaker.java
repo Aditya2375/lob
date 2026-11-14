@@ -21,9 +21,8 @@ public final class MarketMaker {
     private long inventory = 0;   // units held
     private int fills = 0;
 
-    // recent mid moves for the volatility estimate
-    private final long[] midWindow = new long[100];
-    private int midCount = 0;
+    // recent mid moves for the volatility estimate, chronological
+    private final java.util.ArrayDeque<Long> midWindow = new java.util.ArrayDeque<>();
 
     public MarketMaker(Params p) {
         this.p = p;
@@ -45,27 +44,24 @@ public final class MarketMaker {
     }
 
     public void observeMid(long mid) {
-        midWindow[midCount % midWindow.length] = mid;
-        midCount++;
+        midWindow.addLast(mid);
+        if (midWindow.size() > 100) midWindow.removeFirst();
     }
 
     /** Std-dev of recent mid changes, in ticks. 0 until enough data. */
     public double recentVol() {
-        int n = Math.min(midCount, midWindow.length);
+        int n = midWindow.size();
         if (n < 3) return 0;
+        Long[] w = midWindow.toArray(new Long[0]);
         double mean = 0;
-        int cnt = 0;
-        for (int i = 1; i < n; i++) {
-            mean += midWindow[i] - midWindow[i - 1];
-            cnt++;
-        }
-        mean /= cnt;
+        for (int i = 1; i < n; i++) mean += w[i] - w[i - 1];
+        mean /= (n - 1);
         double var = 0;
         for (int i = 1; i < n; i++) {
-            double d = (midWindow[i] - midWindow[i - 1]) - mean;
+            double d = (w[i] - w[i - 1]) - mean;
             var += d * d;
         }
-        return Math.sqrt(var / cnt);
+        return Math.sqrt(var / (n - 1));
     }
 
     /** Cancel-replace cycle. Returns the two quotes [bidTicks, askTicks]; 0 for a side it will not post. */

@@ -32,7 +32,8 @@ final class Json {
     }
 
     static String depthRows(List<long[]> rows) {
-        StringBuilder sb = new StringBuilder('[');
+        // NB: new StringBuilder('[') would be the int-capacity overload, not content.
+        StringBuilder sb = new StringBuilder().append('[');
         for (int i = 0; i < rows.size(); i++) {
             if (i > 0) sb.append(',');
             sb.append('[').append(rows.get(i)[0]).append(',').append(rows.get(i)[1]).append(']');
