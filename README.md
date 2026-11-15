@@ -53,3 +53,7 @@ Requires JDK 21+ and Node 18+. The site is fully static: `docs/` after
 | Volatile tape | 22 | the spread widens itself |
 | Toxic, informed-heavy flow | 33 | adverse selection eats the edge |
 | Flash move | 44 | fair value drops 6.00 in one tick |
+
+## License
+
+Licensed under either of [MIT](LICENSE-MIT) or [Apache License 2.0](LICENSE-APACHE) at your option.
